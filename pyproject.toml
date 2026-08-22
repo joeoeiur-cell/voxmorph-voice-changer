@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "voxmorph"
+version = "1.0.0"
+description = "Realtime AI voice changer with speaker-locked preset voices"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+keywords = ["voice-changer", "rvc", "realtime", "voice-conversion", "audio", "dsp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Win32 (MS Windows)",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Multimedia :: Sound/Audio :: Sound Synthesis",
+]
+dependencies = [
+    "numpy>=1.24,<2.2",
+    "scipy>=1.11",
+    "numba>=0.59",
+    "sounddevice>=0.4.6",
+    "soundfile>=0.12.1",
+    "PySide6>=6.6,<6.9",
+]
+
+[project.optional-dependencies]
+gpu = ["torch>=2.1", "torchaudio>=2.1", "rvc-python>=0.1.5", "faiss-cpu>=1.7.4"]
+hotkeys = ["keyboard>=0.13.5"]
+build = ["pyinstaller==6.11.1", "pillow>=10.0"]
+
+[project.scripts]
+voxmorph = "voxmorph.cli:main"
+
+[project.urls]
+Homepage = "https://voxmorph.app"
+Source = "https://github.com/joeoeiur-cell/voxmorph-voice-changer"
+Issues = "https://github.com/joeoeiur-cell/voxmorph-voice-changer/issues"
+
+[tool.setuptools.packages.find]
+include = ["voxmorph*"]
+
+[tool.setuptools.package-data]
+voxmorph = ["presets/catalog.json"]

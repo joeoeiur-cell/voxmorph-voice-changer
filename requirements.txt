@@ -1,0 +1,10 @@
+# Core runtime - enough for the full app with DSP character voices.
+# Neural identity voices additionally need requirements-gpu.txt.
+
+numpy>=1.24,<2.2
+scipy>=1.11
+numba>=0.59            # JIT for the realtime DSP kernels
+sounddevice>=0.4.6     # PortAudio bindings (WASAPI/ASIO on Windows)
+soundfile>=0.12.1
+PySide6>=6.6,<6.9      # GUI
+keyboard>=0.13.5 ; sys_platform == "win32"   # global hotkeys

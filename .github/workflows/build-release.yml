@@ -1,0 +1,206 @@
+name: Build & Release
+
+# This workflow is the other half of the auto-updater.
+#
+#   push a tag  v1.2.3            -> stable release   -> "Update available"
+#   push to main                  -> ai-nightly build -> "AI-generated build available"
+#   manual dispatch               -> either, on demand
+#
+# It publishes the SHA-256 of the installer into the release body. The app
+# parses that hash and refuses to run an installer that does not match, so a
+# corrupted or tampered download can never be executed.
+
+on:
+  push:
+    tags: ["v*.*.*"]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Release channel"
+        required: true
+        default: "ai-nightly"
+        type: choice
+        options: [stable, ai-nightly]
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.10"
+
+jobs:
+  # ---------------------------------------------------------------- tests
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+      - name: Install core dependencies
+        run: |
+          sudo apt-get update && sudo apt-get install -y libportaudio2 libsndfile1
+          python -m pip install --upgrade pip
+          pip install numpy scipy numba soundfile
+      - name: Run integration tests
+        run: python tests/test_integration.py
+
+  # ---------------------------------------------------------------- build
+  build-windows:
+    needs: test
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      sha256: ${{ steps.hash.outputs.sha256 }}
+      installer: ${{ steps.hash.outputs.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like "refs/tags/v*") {
+            $v = $env:GITHUB_REF -replace "refs/tags/v",""
+          } else {
+            $base = (Select-String -Path voxmorph/__init__.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
+            $v = "$base-nightly.$env:GITHUB_RUN_NUMBER"
+          }
+          echo "version=$v" >> $env:GITHUB_OUTPUT
+          echo "Building version $v"
+
+      - name: Stamp version into the package
+        shell: pwsh
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $isTag = $env:GITHUB_REF -like "refs/tags/v*"
+          $channel = if ($isTag) { "stable" } else { "ai-nightly" }
+          (Get-Content voxmorph/__init__.py) `
+            -replace '__version__ = ".*"', "__version__ = `"$v`"" `
+            -replace '__channel__ = ".*"', "__channel__ = `"$channel`"" `
+            -replace '__repo__ = ".*"', "__repo__ = `"$env:GITHUB_REPOSITORY`"" |
+            Set-Content voxmorph/__init__.py
+          @{version=$v; channel=$channel; built=(Get-Date -Format o)} |
+            ConvertTo-Json | Set-Content version.json
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r requirements.txt
+          pip install pyinstaller==6.11.1
+          # CPU torch keeps the installer to a sane size; the app auto-detects
+          # a CUDA runtime at first launch and offers the GPU download.
+          pip install torch==2.4.1 torchaudio==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+          pip install rvc-python faiss-cpu || echo "RVC extras unavailable - shipping DSP-only build"
+
+      - name: Generate application icon
+        shell: pwsh
+        run: |
+          if (-not (Test-Path assets/voxmorph.ico)) {
+            New-Item -ItemType Directory -Force -Path assets | Out-Null
+            python tools/make_icon.py
+          }
+
+      - name: Build with PyInstaller
+        run: pyinstaller build/voxmorph.spec --noconfirm --clean
+
+      - name: Smoke-test the build
+        shell: pwsh
+        run: |
+          $exe = "dist/VoxMorph/VoxMorph-cli.exe"
+          if (-not (Test-Path $exe)) { throw "Build produced no executable" }
+          & $exe --version
+          & $exe voices
+          Write-Host "Smoke test passed"
+
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+          }
+          & $iscc "/DMyAppVersion=${{ steps.version.outputs.version }}" build\installer.iss
+
+      - name: Compute SHA-256
+        id: hash
+        shell: pwsh
+        run: |
+          $file = Get-ChildItem dist/installer/*.exe | Select-Object -First 1
+          $h = (Get-FileHash $file.FullName -Algorithm SHA256).Hash.ToLower()
+          echo "sha256=$h" >> $env:GITHUB_OUTPUT
+          echo "name=$($file.Name)" >> $env:GITHUB_OUTPUT
+          Write-Host "$($file.Name)  $h"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VoxMorph-Setup
+          path: dist/installer/*.exe
+          retention-days: 30
+
+  # -------------------------------------------------------------- release
+  release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: VoxMorph-Setup
+          path: dist
+
+      - name: Determine channel
+        id: ch
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "prerelease=false" >> $GITHUB_OUTPUT
+            echo "channel=stable"   >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "prerelease=true"      >> $GITHUB_OUTPUT
+            echo "channel=ai-nightly"   >> $GITHUB_OUTPUT
+            echo "tag=v${{ needs.build-windows.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Compose release notes
+        id: notes
+        run: |
+          {
+            echo "notes<<EOF"
+            echo "### VoxMorph ${{ needs.build-windows.outputs.version }}"
+            echo ""
+            if [ "${{ steps.ch.outputs.channel }}" = "ai-nightly" ]; then
+              echo "> Automated build produced by CI from commit \`${GITHUB_SHA:0:7}\`."
+              echo "> Users on the **AI nightly** channel are offered this automatically."
+              echo ""
+            fi
+            echo "**Changes**"
+            git log -10 --pretty="- %s" || true
+            echo ""
+            echo "**Installer integrity**"
+            echo ""
+            echo "File: \`${{ needs.build-windows.outputs.installer }}\`"
+            echo ""
+            echo "sha256: ${{ needs.build-windows.outputs.sha256 }}"
+            echo ""
+            echo "VoxMorph verifies this hash before running the installer."
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.ch.outputs.tag }}
+          name: VoxMorph ${{ needs.build-windows.outputs.version }}
+          body: ${{ steps.notes.outputs.notes }}
+          prerelease: ${{ steps.ch.outputs.prerelease }}
+          files: dist/*.exe
+          fail_on_unmatched_files: true

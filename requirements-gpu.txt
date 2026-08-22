@@ -1,0 +1,26 @@
+# Neural identity voices (RVC). Install AFTER requirements.txt.
+#
+# CUDA (NVIDIA) - strongly recommended for realtime:
+#   pip install torch==2.4.1+cu121 torchaudio==2.4.1+cu121 \
+#       --index-url https://download.pytorch.org/whl/cu121
+#   pip install -r requirements-gpu.txt
+#
+# AMD / Intel GPU on Windows (DirectML):
+#   pip install torch-directml
+#
+# CPU only: works, but expect 300 ms+ latency. Prefer the DSP character
+# presets on CPU-only machines.
+
+-r requirements.txt
+
+torch>=2.1
+torchaudio>=2.1
+rvc-python>=0.1.5      # RVC inference (daswer123/rvc-python)
+faiss-cpu>=1.7.4       # retrieval index lookups
+praat-parselmouth>=0.4.3
+pyworld>=0.3.4
+torchcrepe>=0.0.22
+librosa>=0.10.1
+
+# Optional zero-shot cloning (installed separately, not on PyPI):
+#   pip install git+https://github.com/Plachtaa/seed-vc.git
