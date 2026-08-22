@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VoxMorph — Realtime AI Voice Changer for Windows</title>
+  <meta name="description" content="Realtime AI voice changer with speaker-locked preset voices. Sub-100 ms latency. Free and open source.">
+  <meta property="og:title" content="VoxMorph — Sound like someone else. Not like yourself, higher.">
+  <meta property="og:description" content="Realtime AI voice changer with speaker-locked preset voices. Sub-100 ms latency. Free and open source.">
+  <meta property="og:type" content="website">
+  <script
+    src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4.3.0/dist/index.global.js"
+    integrity="sha384-nWTzRTCY/9V4Bo352ehygr1c4cnst4XN6lMR3fipakEQrhVpc0hEM5Dii3Amz0sT"
+    crossorigin="anonymous"
+  ></script>
+  <style type="text/tailwindcss">
+    @custom-variant dark (&:where(.dark, .dark *));
+    @theme {
+      --color-bg: #0e1116;
+      --color-surface: #161b22;
+      --color-surface2: #1c2330;
+      --color-border: #2a3441;
+      --color-ink: #e6edf3;
+      --color-muted: #8b98a5;
+      --color-accent: #22d3ee;
+      --color-accentdk: #0e7490;
+      --color-good: #34d399;
+      --color-warn: #fbbf24;
+      --color-bad: #f87171;
+      --color-update: #a78bfa;
+    }
+  </style>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <script type="application/ld+json">
+  {"@context":"https://schema.org","@type":"SoftwareApplication","name":"VoxMorph","operatingSystem":"Windows 10, Windows 11","applicationCategory":"MultimediaApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://opensource.org/licenses/MIT"}
+  </script>
+</head>
+<body class="min-h-dvh bg-bg text-ink antialiased font-sans">
+  <div id="app"></div>
+  <script src="app.js"></script>
+</body>
+</html>
