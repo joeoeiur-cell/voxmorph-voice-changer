@@ -1,12 +1,14 @@
 name: Deploy website
 
-# Builds the demo audio with the real VoxMorph DSP engine, then publishes
-# website/ to GitHub Pages. Audio is generated rather than committed, so no
-# binaries live in git and the samples always match the current DSP code.
+# Renders the demo audio with the real VoxMorph DSP engine, then publishes
+# website/ to the `gh-pages` branch.
 #
-# The configure-pages step below runs with `enablement: true`, which turns
-# Pages on for the repository via the API the first time this workflow runs.
-# Without it the deploy job fails with "Failed to create deployment (404)".
+# Why a branch instead of the Pages deployment API: creating a Pages *site*
+# requires repo-administration rights that GITHUB_TOKEN does not have
+# ("Resource not accessible by integration"), which made the API route fail
+# until someone flipped the switch by hand. Pushing a branch only needs
+# `contents: write`, which the workflow token does have, so this route works
+# unattended. GitHub serves a public repo's gh-pages branch automatically.
 
 on:
   push:
@@ -18,35 +20,21 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: true
 
 jobs:
-  build:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - name: Enable and configure GitHub Pages
-        id: pages
-        continue-on-error: true   # fails until Pages is switched on (see below)
-        uses: actions/configure-pages@v6
-        with:
-          enablement: true
-
-      - name: Pages setup reminder
-        if: steps.pages.outcome == 'failure'
-        run: |
-          echo "::warning title=GitHub Pages not enabled::Could not create the Pages site automatically. GITHUB_TOKEN is not permitted to create one. Enable it once under Settings -> Pages -> Build and deployment -> Source: GitHub Actions, then re-run this workflow."
-
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: pip
 
       - name: Install audio toolchain
@@ -71,20 +59,32 @@ jobs:
           test -f website/app.js
           test -f website/styles.css
           count=$(ls website/audio/*.mp3 website/audio/*.wav 2>/dev/null | wc -l)
-          echo "audio clips: $count"
+          echo "audio clips rendered: $count"
           test "$count" -ge 9
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: website
+      - name: Publish to gh-pages
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd website
+          touch .nojekyll          # serve _-prefixed paths verbatim
+          rm -f build_audio.py     # source script does not belong on the site
+          git init -q -b gh-pages
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -qm "Deploy site from ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:gh-pages
+          echo "Published $(ls -1 | wc -l) top-level entries to gh-pages"
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v5
+      - name: Summary
+        run: |
+          owner=$(echo "$GITHUB_REPOSITORY" | cut -d/ -f1)
+          name=$(echo "$GITHUB_REPOSITORY" | cut -d/ -f2)
+          echo "### Website published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Branch \`gh-pages\` updated. Site URL:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "https://$owner.github.io/$name/" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "If it 404s, set **Settings -> Pages -> Source: Deploy from a branch -> gh-pages / (root)**." >> $GITHUB_STEP_SUMMARY
