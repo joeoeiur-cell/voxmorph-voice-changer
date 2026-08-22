@@ -84,16 +84,43 @@ const ic = (n, c = 'w-5 h-5') =>
 /* ── GITHUB RELEASE DATA ────────────────────────────────────────────────── */
 const Release = { data: null };
 
+/* Compare two semver strings. Mirrors the app's updater: a prerelease sorts
+   BELOW the same release version (1.0.1-nightly.9 < 1.0.1). */
+function cmpVersion(a, b) {
+  const parse = v => {
+    const m = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.\-]+))?/.exec((v || '').trim());
+    return m ? { n: [+m[1], +m[2], +m[3]], pre: m[4] || null } : null;
+  };
+  const A = parse(a), B = parse(b);
+  if (!A || !B) return 0;
+  for (let i = 0; i < 3; i++) if (A.n[i] !== B.n[i]) return A.n[i] - B.n[i];
+  if (A.pre === B.pre) return 0;
+  if (A.pre === null) return 1;          // release beats its own prerelease
+  if (B.pre === null) return -1;
+  const pa = A.pre.split('.'), pb = B.pre.split('.');
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i], y = pb[i];
+    if (x === undefined) return -1;
+    if (y === undefined) return 1;
+    const nx = /^\d+$/.test(x), ny = /^\d+$/.test(y);
+    if (nx && ny) { if (+x !== +y) return +x - +y; }
+    else if (x !== y) return x < y ? -1 : 1;
+  }
+  return 0;
+}
+
 async function fetchRelease() {
   try {
     // /releases/latest ignores prereleases and 404s on a repo that only has
-    // nightly builds, so list releases and pick the newest stable one, or the
-    // newest prerelease when no stable release exists yet.
-    const r = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/releases?per_page=20`,
+    // nightly builds. The list endpoint is also NOT reliably ordered newest
+    // first, so sort explicitly by version rather than taking [0].
+    const r = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/releases?per_page=30`,
       { headers: { Accept: 'application/vnd.github+json' } });
     if (!r.ok) throw 0;
     const all = (await r.json()).filter(x => !x.draft);
-    const rel = all.find(x => !x.prerelease) || all[0];
+    const newest = list => list.slice().sort((x, y) =>
+      cmpVersion(y.tag_name, x.tag_name))[0];
+    const rel = newest(all.filter(x => !x.prerelease)) || newest(all);
     if (!rel) throw 0;
     const asset = (rel.assets || []).find(a => /\.(exe|msi)$/i.test(a.name)) || rel.assets?.[0];
     const sha = (rel.body || '').match(/\b([a-f0-9]{64})\b/i);
