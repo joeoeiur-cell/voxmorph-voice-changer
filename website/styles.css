@@ -1,0 +1,70 @@
+/* VoxMorph site — styles beyond Tailwind utilities */
+
+html { scroll-behavior: smooth; }
+body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+.mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+
+/* Tighter headline tracking at display sizes */
+h1, h2 { letter-spacing: -0.022em; }
+
+/* FAQ accordion — animates without measuring heights */
+.faq-item .faq-answer {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.24s ease;
+}
+.faq-item.open .faq-answer { grid-template-rows: 1fr; }
+.faq-item .faq-answer > div { overflow: hidden; }
+.faq-item .faq-chevron { transition: transform 0.24s ease; }
+.faq-item.open .faq-chevron { transform: rotate(180deg); }
+
+/* Playback level bars */
+.bars span {
+  height: 20%;
+  transition: height 0.18s ease, background-color 0.18s ease;
+}
+.bars.playing span {
+  background-color: rgb(34 211 238 / 0.85);
+  animation: bounce 0.75s ease-in-out infinite;
+  animation-delay: calc(var(--i) * 0.055s);
+}
+@keyframes bounce {
+  0%, 100% { height: 22%; }
+  50%      { height: 92%; }
+}
+
+/* Async data placeholder */
+.skeleton {
+  background: linear-gradient(90deg, #1c2330 25%, #2a3441 50%, #1c2330 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Focus states */
+a:focus-visible, button:focus-visible {
+  outline: 2px solid #22d3ee;
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+.focus\:not-sr-only:focus {
+  position: static; width: auto; height: auto; margin: 0;
+  overflow: visible; clip: auto; white-space: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
