@@ -1,0 +1,175 @@
+{
+  "catalog_version": 4,
+  "remote_catalog_url": "https://raw.githubusercontent.com/joeoeiur-cell/voxmorph-voices/main/catalog.json",
+  "_note": [
+    "Two kinds of preset live here and they behave very differently.",
+    "",
+    "IDENTITY presets (kind='rvc') are speaker-locked: a trained decoder renders",
+    "your speech in a fixed target voice, so the output sounds like the SAME",
+    "person no matter who talks into the mic. These require a model file.",
+    "",
+    "CHARACTER presets (kind='dsp') are relative transforms of YOUR voice using",
+    "independent pitch + formant shifting. They need no download and no GPU, but",
+    "two different speakers using 'Deep Male' will still sound like two people.",
+    "",
+    "No third-party voice checkpoints are bundled or auto-downloaded. Point",
+    "remote_catalog_url at your own catalog, or drop .pth/.index files into the",
+    "models folder and VoxMorph will discover them automatically."
+  ],
+
+  "presets": [
+    {
+      "id": "dsp_natural",
+      "name": "Natural (bypass)",
+      "kind": "dsp",
+      "category": "Neutral",
+      "description": "Cleanup only - denoise, gate, EQ and limiting. No voice change.",
+      "dsp": { "pitch": 0.0, "formant": 0.0 },
+      "fx": { "character": "none" }
+    },
+    {
+      "id": "dsp_deep_male",
+      "name": "Deep Male",
+      "kind": "dsp",
+      "category": "Masculine",
+      "description": "Lower pitch with a larger vocal tract. Authoritative, not muddy.",
+      "dsp": { "pitch": -4.0, "formant": -2.5 },
+      "fx": { "character": "none", "eq_low_db": 2.5, "eq_high_db": -1.0 }
+    },
+    {
+      "id": "dsp_giant",
+      "name": "Giant",
+      "kind": "dsp",
+      "category": "Masculine",
+      "description": "Very large vocal tract with subharmonic weight.",
+      "dsp": { "pitch": -8.0, "formant": -6.0 },
+      "fx": { "character": "monster", "eq_low_db": 4.0, "reverb": 0.18 }
+    },
+    {
+      "id": "dsp_radio_host",
+      "name": "Radio Host",
+      "kind": "dsp",
+      "category": "Broadcast",
+      "description": "Broadcast chain: slight depth, heavy compression, presence lift.",
+      "dsp": { "pitch": -1.5, "formant": -1.0 },
+      "fx": { "character": "none", "eq_low_db": 3.0, "eq_high_db": 2.5,
+              "comp_threshold_db": -26.0, "comp_ratio": 4.5, "deesser": true }
+    },
+    {
+      "id": "dsp_young_female",
+      "name": "Young Female",
+      "kind": "dsp",
+      "category": "Feminine",
+      "description": "Higher pitch with a smaller vocal tract - avoids chipmunk artefacts.",
+      "dsp": { "pitch": 4.5, "formant": 3.0 },
+      "fx": { "character": "none", "eq_high_db": 1.5 }
+    },
+    {
+      "id": "dsp_soft_female",
+      "name": "Soft Female",
+      "kind": "dsp",
+      "category": "Feminine",
+      "description": "Gentler lift with breathier top end.",
+      "dsp": { "pitch": 3.0, "formant": 2.2 },
+      "fx": { "character": "none", "eq_high_db": 2.0, "comp_ratio": 2.5 }
+    },
+    {
+      "id": "dsp_kid",
+      "name": "Kid",
+      "kind": "dsp",
+      "category": "Feminine",
+      "description": "Small vocal tract, bright and quick.",
+      "dsp": { "pitch": 7.0, "formant": 5.5 },
+      "fx": { "character": "none", "eq_high_db": 2.0 }
+    },
+    {
+      "id": "dsp_old_man",
+      "name": "Old Man",
+      "kind": "dsp",
+      "category": "Character",
+      "description": "Lower, thinner and slightly unsteady.",
+      "dsp": { "pitch": -2.5, "formant": -1.0 },
+      "fx": { "character": "none", "eq_low_db": -2.0, "eq_mid_db": 2.0, "chorus": 0.12 }
+    },
+    {
+      "id": "dsp_robot",
+      "name": "Robot",
+      "kind": "dsp",
+      "category": "Character",
+      "description": "Ring-modulated monotone with metallic resonance.",
+      "dsp": { "pitch": 0.0, "formant": 0.0 },
+      "fx": { "character": "robot", "autotune": 0.9 }
+    },
+    {
+      "id": "dsp_demon",
+      "name": "Demon",
+      "kind": "dsp",
+      "category": "Character",
+      "description": "Deep, saturated and cavernous.",
+      "dsp": { "pitch": -10.0, "formant": -7.0 },
+      "fx": { "character": "monster", "reverb": 0.32, "eq_low_db": 5.0 }
+    },
+    {
+      "id": "dsp_alien",
+      "name": "Alien",
+      "kind": "dsp",
+      "category": "Character",
+      "description": "Inharmonic ring modulation over a narrow band.",
+      "dsp": { "pitch": 2.0, "formant": -3.0 },
+      "fx": { "character": "alien", "echo": 0.22 }
+    },
+    {
+      "id": "dsp_ghost",
+      "name": "Ghost",
+      "kind": "dsp",
+      "category": "Character",
+      "description": "Detuned, distant and reverberant.",
+      "dsp": { "pitch": -1.0, "formant": 1.5 },
+      "fx": { "character": "cave", "reverb": 0.55, "chorus": 0.35, "echo": 0.2 }
+    },
+    {
+      "id": "dsp_telephone",
+      "name": "Telephone",
+      "kind": "dsp",
+      "category": "Broadcast",
+      "description": "Band-limited 300 Hz - 3.4 kHz handset simulation.",
+      "dsp": { "pitch": 0.0, "formant": 0.0 },
+      "fx": { "character": "telephone" }
+    },
+    {
+      "id": "dsp_megaphone",
+      "name": "Megaphone",
+      "kind": "dsp",
+      "category": "Broadcast",
+      "description": "Horn resonance, saturation and slapback.",
+      "dsp": { "pitch": 0.0, "formant": -1.0 },
+      "fx": { "character": "megaphone" }
+    },
+    {
+      "id": "dsp_chipmunk",
+      "name": "Chipmunk",
+      "kind": "dsp",
+      "category": "Character",
+      "description": "Deliberately unnatural - pitch up without formant correction.",
+      "dsp": { "pitch": 10.0, "formant": 0.0 },
+      "fx": { "character": "none" }
+    }
+  ],
+
+  "identity_preset_schema": {
+    "_comment": "Shape of an RVC identity preset. Entries fetched from remote_catalog_url or discovered locally use this schema.",
+    "id": "rvc_example",
+    "name": "Example Voice",
+    "kind": "rvc",
+    "category": "Identity",
+    "description": "Speaker-locked voice - identical output for every speaker.",
+    "model_url": "https://example.com/voice.pth",
+    "model_sha256": "<64 hex chars>",
+    "index_url": "https://example.com/voice.index",
+    "index_sha256": "<64 hex chars>",
+    "size_mb": 55,
+    "target_f0": 118.0,
+    "recommended": { "index_rate": 0.65, "protect": 0.33, "f0_method": "rmvpe" },
+    "license": "Specify the license and consent status of the voice data."
+  }
+}
