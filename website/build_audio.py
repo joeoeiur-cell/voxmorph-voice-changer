@@ -116,8 +116,11 @@ def to_mp3(wav: Path) -> Path:
 
 def main() -> int:
     if not HAVE_WORLD:
-        print("ERROR: pyworld is required for the voice presets.\n"
-              "       pip install pyworld", file=sys.stderr)
+        from voxmorph.dsp.world_morph import WORLD_IMPORT_ERROR
+        print("ERROR: the WORLD vocoder is unavailable, so the voice presets "
+              "cannot be rendered.\n"
+              f"       import error: {WORLD_IMPORT_ERROR or 'pyworld not installed'}\n"
+              '       fix: pip install pyworld "setuptools<81"', file=sys.stderr)
         return 1
 
     OUT.mkdir(parents=True, exist_ok=True)

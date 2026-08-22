@@ -47,9 +47,16 @@ log = get_logger("world")
 try:
     import pyworld
     HAVE_WORLD = True
-except Exception:  # pragma: no cover - optional dependency
+    WORLD_IMPORT_ERROR = ""
+except Exception as _exc:  # pragma: no cover - optional dependency
+    # Do NOT swallow this silently. pyworld can install cleanly and still fail
+    # to import - most often because its __init__ does `import pkg_resources`,
+    # which setuptools >= 81 no longer ships, or because the wheel was built
+    # against a different numpy ABI. Recording the reason turns a confusing
+    # "pyworld is required" message into an actionable one.
     pyworld = None
     HAVE_WORLD = False
+    WORLD_IMPORT_ERROR = f"{type(_exc).__name__}: {_exc}"
 
 
 @dataclass
@@ -202,8 +209,12 @@ def morph(audio: np.ndarray, fs: int, spec: MorphSpec,
           measured_f0: Optional[float] = None) -> Tuple[np.ndarray, dict]:
     """Analyse, transform and resynthesise. Returns (audio, report)."""
     if not HAVE_WORLD:
-        raise RuntimeError("pyworld is required for high-quality morphing: "
-                           "pip install pyworld")
+        raise RuntimeError(
+            "pyworld is required for high-quality morphing.\n"
+            f"  import failed with: {WORLD_IMPORT_ERROR or 'not installed'}\n"
+            "  install with:       pip install pyworld \"setuptools<81\"\n"
+            "  (pyworld's __init__ imports pkg_resources, which newer "
+            "setuptools no longer provides)")
 
     x = np.ascontiguousarray(audio, dtype=np.float64)
 

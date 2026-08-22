@@ -42,7 +42,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg libsndfile1
           python -m pip install --upgrade pip
-          pip install "numpy<2.2" scipy numba soundfile piper-tts pyworld
+          pip install "setuptools<81" "numpy<2.2" scipy numba soundfile piper-tts pyworld
+          python -c "import pyworld, numpy; print(f'pyworld ok, numpy {numpy.__version__}')"
 
       - name: Cache the TTS voice model
         uses: actions/cache@v6
