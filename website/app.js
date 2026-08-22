@@ -85,10 +85,15 @@ const Release = { data: null };
 
 async function fetchRelease() {
   try {
-    const r = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/releases/latest`,
+    // /releases/latest ignores prereleases and 404s on a repo that only has
+    // nightly builds, so list releases and pick the newest stable one, or the
+    // newest prerelease when no stable release exists yet.
+    const r = await fetch(`https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/releases?per_page=20`,
       { headers: { Accept: 'application/vnd.github+json' } });
     if (!r.ok) throw 0;
-    const rel = await r.json();
+    const all = (await r.json()).filter(x => !x.draft);
+    const rel = all.find(x => !x.prerelease) || all[0];
+    if (!rel) throw 0;
     const asset = (rel.assets || []).find(a => /\.(exe|msi)$/i.test(a.name)) || rel.assets?.[0];
     const sha = (rel.body || '').match(/\b([a-f0-9]{64})\b/i);
     Release.data = {
@@ -97,7 +102,7 @@ async function fetchRelease() {
       date: (rel.published_at || '').slice(0, 10) || CONFIG.fallback.date,
       sha256: sha ? sha[1].toLowerCase() : '',
       url: asset?.browser_download_url || rel.html_url || CONFIG.fallback.url,
-      notes: rel.body || '', live: true,
+      notes: rel.body || '', prerelease: !!rel.prerelease, live: true,
     };
   } catch {
     Release.data = { ...CONFIG.fallback, live: false };

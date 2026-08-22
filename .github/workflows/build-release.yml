@@ -67,14 +67,20 @@ jobs:
         id: version
         shell: pwsh
         run: |
+          $base = (Select-String -Path voxmorph/__init__.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
           if ($env:GITHUB_REF -like "refs/tags/v*") {
             $v = $env:GITHUB_REF -replace "refs/tags/v",""
           } else {
-            $base = (Select-String -Path voxmorph/__init__.py -Pattern '__version__ = "(.+)"').Matches[0].Groups[1].Value
-            $v = "$base-nightly.$env:GITHUB_RUN_NUMBER"
+            # A nightly must be a prerelease of the NEXT patch, not of the
+            # current one: per semver 1.0.0-nightly.8 sorts BELOW 1.0.0, so
+            # tagging it that way would hide every nightly from users already
+            # running 1.0.0. Bumping the patch first makes it sort above.
+            $p = $base.Split('.')
+            $next = "$($p[0]).$($p[1]).$([int]$p[2] + 1)"
+            $v = "$next-nightly.$env:GITHUB_RUN_NUMBER"
           }
           echo "version=$v" >> $env:GITHUB_OUTPUT
-          echo "Building version $v"
+          echo "Building version $v (base $base)"
 
       - name: Stamp version into the package
         shell: pwsh
