@@ -1,26 +1,49 @@
 # Neural identity voices (RVC). Install AFTER requirements.txt.
 #
-# CUDA (NVIDIA) - strongly recommended for realtime:
-#   pip install torch==2.4.1+cu121 torchaudio==2.4.1+cu121 \
-#       --index-url https://download.pytorch.org/whl/cu121
+# ---------------------------------------------------------------------------
+# READ THIS FIRST — the RVC ecosystem has a hard Python ceiling.
+#
+# rvc-python 0.1.5 (the last release, Oct 2024) pins:
+#       numpy <= 1.23.5
+#       fairseq == 0.12.2
+#       faiss-cpu == 1.7.3
+#
+# numpy 1.23.5 has no wheels above Python 3.11, and fairseq 0.12.2 does not
+# build on modern toolchains. In practice that means identity voices require a
+# DEDICATED Python 3.10 or 3.11 environment. They cannot share the same
+# interpreter as the packaged app, which targets 3.12.
+#
+# This is why the shipped installer is DSP-only: the character presets need
+# none of this, run on any CPU, and keep the download near 180 MB.
+# ---------------------------------------------------------------------------
+#
+# Recommended setup for identity voices:
+#
+#   py -3.10 -m venv .venv-rvc
+#   .venv-rvc\Scripts\activate
+#   pip install "numpy<=1.23.5"
+#   pip install torch==2.1.2+cu118 torchaudio==2.1.2+cu118 \
+#       --index-url https://download.pytorch.org/whl/cu118
 #   pip install -r requirements-gpu.txt
+#   python run.py
 #
-# AMD / Intel GPU on Windows (DirectML):
-#   pip install torch-directml
-#
-# CPU only: works, but expect 300 ms+ latency. Prefer the DSP character
-# presets on CPU-only machines.
+# AMD / Intel GPU on Windows:  pip install torch-directml
+# CPU only: works, but expect 300 ms+ latency — prefer the DSP presets.
 
 -r requirements.txt
 
-torch>=2.1
-torchaudio>=2.1
-rvc-python>=0.1.5      # RVC inference (daswer123/rvc-python)
-faiss-cpu>=1.7.4       # retrieval index lookups
-praat-parselmouth>=0.4.3
+torch>=2.1,<2.3
+torchaudio>=2.1,<2.3
+rvc-python==0.1.5        # daswer123/rvc-python — unmaintained; see note above
+faiss-cpu==1.7.3
+praat-parselmouth>=0.4.2
 pyworld>=0.3.4
 torchcrepe>=0.0.22
 librosa>=0.10.1
 
-# Optional zero-shot cloning (installed separately, not on PyPI):
+# Optional zero-shot cloning (not on PyPI):
 #   pip install git+https://github.com/Plachtaa/seed-vc.git
+#
+# If you would rather run a maintained realtime RVC stack alongside VoxMorph,
+# deiteris/voice-changer is the actively developed w-okada fork and exposes an
+# HTTP API you can point the RVCEngine adapter at.

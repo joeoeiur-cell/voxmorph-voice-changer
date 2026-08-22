@@ -103,8 +103,12 @@ python run.py
 
 For neural identity voices:
 
+> **Heads up on the RVC ecosystem.** `rvc-python` (last released Oct 2024) pins `numpy<=1.23.5` and `fairseq==0.12.2`, neither of which installs on a current Python. Identity voices therefore need a **dedicated Python 3.10/3.11 environment** — they cannot share the interpreter the packaged app uses. This is exactly why the shipped installer is DSP-only and stays near 180 MB. The engine layer detects a missing backend and falls back cleanly, so nothing breaks either way.
+
 ```bash
-pip install torch==2.4.1+cu121 torchaudio==2.4.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+py -3.10 -m venv .venv-rvc && .venv-rvc\Scripts\activate
+pip install "numpy<=1.23.5"
+pip install torch==2.1.2+cu118 torchaudio==2.1.2+cu118 --index-url https://download.pytorch.org/whl/cu118
 pip install -r requirements-gpu.txt
 ```
 

@@ -34,11 +34,13 @@ if (-not (Test-Path .venv)) {
 python -m pip install --upgrade pip wheel | Out-Null
 Write-Host "Installing dependencies..." -ForegroundColor Yellow
 pip install -r requirements.txt
-pip install pyinstaller==6.11.1
+pip install pyinstaller==6.22.2
 
 if ($WithGPU) {
-    Write-Host "Installing CUDA torch + RVC (this is a large download)..." -ForegroundColor Yellow
-    pip install torch==2.4.1+cu121 torchaudio==2.4.1+cu121 --index-url https://download.pytorch.org/whl/cu121
+    Write-Host "Installing CUDA torch + RVC (large download)..." -ForegroundColor Yellow
+    Write-Warning "Identity voices require Python 3.10/3.11: rvc-python pins numpy<=1.23.5 and fairseq==0.12.2."
+    pip install "numpy<=1.23.5"
+    pip install torch==2.1.2+cu118 torchaudio==2.1.2+cu118 --index-url https://download.pytorch.org/whl/cu118
     pip install -r requirements-gpu.txt
 }
 
