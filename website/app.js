@@ -134,7 +134,11 @@ const Player = {
   },
 
   srcFor(id) {
-    return `audio/${this.mode === 'original' ? 'original' : id}.mp3`;
+    const key = this.mode === 'original' ? 'original' : id;
+    // Standalone preview builds inline the clips as data URIs; the deployed
+    // site serves them as files from /audio.
+    const inline = (typeof window !== 'undefined' && window.AUDIO_DATA) || null;
+    return (inline && inline[key]) ? inline[key] : `audio/${key}.mp3`;
   },
 
   toggle(id) {
