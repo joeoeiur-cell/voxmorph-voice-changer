@@ -3,6 +3,10 @@ name: Deploy website
 # Builds the demo audio with the real VoxMorph DSP engine, then publishes
 # website/ to GitHub Pages. Audio is generated rather than committed, so no
 # binaries live in git and the samples always match the current DSP code.
+#
+# The configure-pages step below runs with `enablement: true`, which turns
+# Pages on for the repository via the API the first time this workflow runs.
+# Without it the deploy job fails with "Failed to create deployment (404)".
 
 on:
   push:
@@ -26,9 +30,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v5
+      - name: Enable and configure GitHub Pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: pip
@@ -38,10 +47,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg libsndfile1
           python -m pip install --upgrade pip
-          pip install numpy scipy numba soundfile piper-tts
+          pip install "numpy<2.2" scipy numba soundfile piper-tts
 
       - name: Cache the TTS voice model
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: .cache/piper
           key: piper-en_US-ryan-medium-v1
@@ -49,8 +58,17 @@ jobs:
       - name: Render demo audio through the DSP engine
         run: python website/build_audio.py
 
+      - name: Verify the site is complete
+        run: |
+          test -f website/index.html
+          test -f website/app.js
+          test -f website/styles.css
+          count=$(ls website/audio/*.mp3 website/audio/*.wav 2>/dev/null | wc -l)
+          echo "audio clips: $count"
+          test "$count" -ge 9
+
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: website
 
@@ -62,4 +80,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
