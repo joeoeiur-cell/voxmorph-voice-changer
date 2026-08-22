@@ -42,7 +42,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg libsndfile1
           python -m pip install --upgrade pip
-          pip install "numpy<2.2" scipy numba soundfile piper-tts
+          pip install "numpy<2.2" scipy numba soundfile piper-tts pyworld
 
       - name: Cache the TTS voice model
         uses: actions/cache@v6
@@ -60,7 +60,7 @@ jobs:
           test -f website/styles.css
           count=$(ls website/audio/*.mp3 website/audio/*.wav 2>/dev/null | wc -l)
           echo "audio clips rendered: $count"
-          test "$count" -ge 9
+          test "$count" -ge 10
 
       - name: Publish to gh-pages
         env:

@@ -31,6 +31,7 @@ dependencies = [
 gpu = ["torch>=2.1", "torchaudio>=2.1", "rvc-python>=0.1.5", "faiss-cpu>=1.7.4"]
 hotkeys = ["keyboard>=0.13.5"]
 build = ["pyinstaller==6.22.2", "pillow>=10.0"]
+morph = ["pyworld>=0.3.4"]
 
 [project.scripts]
 voxmorph = "voxmorph.cli:main"

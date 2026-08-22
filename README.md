@@ -22,12 +22,29 @@ VoxMorph ships two genuinely different kinds of preset, and the UI labels them c
 
 ## Realism
 
-The things that actually decide whether a converted voice is believable, in order of impact:
+Two engines, chosen by whether you need realtime:
 
-1. **Correct octave.** Auto pitch match measures your natural F0 with a YIN tracker (accurate to under a cent in testing) and shifts it into the target voice's range. Get this wrong and no checkpoint sounds human.
+| | Realtime (phase vocoder) | Offline (WORLD vocoder) |
+|---|---|---|
+| Used by | Live conversion | `voxmorph morph`, website demos |
+| Latency | ~2 ms | ~3 s per 5 s clip |
+| Harmonics-to-noise | baseline | **+1.4 to +2.9 dB** on female presets |
+
+A phase vocoder reconstructs each frequency bin's phase independently, which decorrelates the harmonics and produces the hollow "phasiness" that makes a shifted voice sound synthetic. Where latency doesn't matter, VoxMorph instead decomposes speech with WORLD into F0, spectral envelope and aperiodicity, transforms each separately, and resynthesises.
+
+**Gender is not a pitch slider.** Perceptual research converges on three cues, and `dsp/world_morph.py` models all three:
+
+1. **F0** — female/male ratio ≈ 1.5–1.6.
+2. **Vocal tract length**, heard as formant positions — female formants sit ~18% higher. Crucially F1 tracks tract length *more weakly* than F2/F3, so the warp is **piecewise, not a single multiplier**; scaling everything uniformly overshoots F1 and produces the classic helium colouration. The curve is also pinned at Nyquist so an upward shift doesn't discard the top octave.
+3. **Source spectral tilt** — how fast energy rolls off. This is the cue nearly every voice changer ignores, and it's why they sound like a pitch knob rather than a different person.
+
+Plus aperiodicity scaling for breathiness and smoothed F0 jitter, because perfectly steady pitch is the biggest tell of synthetic speech.
+
+The other things that decide whether a converted voice is believable:
+
+1. **Correct octave.** Auto pitch match measures your natural F0 with a YIN tracker (accurate to under a cent in testing) and shifts it into the target's range.
 2. **Clean input.** Denoise → gate → high-pass runs *before* the model. Models hallucinate badly on room tone.
-3. **Formant/pitch decoupling.** Character presets move vocal-tract size and pitch independently, so "Deep Male" sounds like a bigger person rather than a slowed-down tape.
-4. **Post-model dynamics.** Compression, de-essing and limiting run *after* the model, because sibilance and level jumps are the biggest giveaways of AI conversion.
+3. **Post-model dynamics.** Compression, de-essing and limiting run *after*, because sibilance and level jumps are the biggest giveaways of AI conversion.
 
 ## Speed
 

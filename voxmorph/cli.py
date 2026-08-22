@@ -130,6 +130,58 @@ def _cmd_convert(args) -> int:
     return 0
 
 
+def _cmd_morph(args) -> int:
+    """Offline high-quality voice morphing via the WORLD vocoder.
+
+    Separate from `convert` because this path is not realtime: it analyses the
+    whole file into F0 / spectral envelope / aperiodicity, transforms each
+    independently, and resynthesises. Slower, but markedly more natural than
+    the realtime phase vocoder - measurably higher harmonics-to-noise ratio.
+    """
+    import numpy as np
+    import soundfile as sf
+
+    from .dsp.world_morph import HAVE_WORLD, PRESETS, morph_preset
+    from .dsp.pitch import median_f0
+    from .logging_setup import setup_logging
+    setup_logging()
+
+    if not HAVE_WORLD:
+        print("This command needs the WORLD vocoder:\n  pip install pyworld",
+              file=sys.stderr)
+        return 2
+
+    if args.preset not in PRESETS:
+        print(f"Unknown preset '{args.preset}'.\nAvailable: "
+              f"{', '.join(sorted(PRESETS))}", file=sys.stderr)
+        return 2
+
+    data, sr = sf.read(args.src, dtype="float32")
+    if data.ndim > 1:
+        data = data.mean(axis=1)
+
+    print(f"source: {len(data)/sr:.2f}s @ {sr} Hz  F0 {median_f0(data, sr):.1f} Hz")
+    out, report = morph_preset(data, sr, args.preset)
+    sf.write(args.dst, out, sr)
+
+    print(f"preset: {PRESETS[args.preset].name}")
+    for k, v in report.items():
+        print(f"  {k:<15} {v}")
+    print(f"wrote {args.dst}")
+    return 0
+
+
+def _cmd_morph_list(_args) -> int:
+    from .dsp.world_morph import PRESETS
+    print(f"{'id':<16} {'F0':>7}  {'tract':>6}  {'tilt':>6}  description")
+    print("-" * 92)
+    for pid, s in sorted(PRESETS.items()):
+        f0 = f"{s.target_f0:.0f}Hz" if s.target_f0 else "keep"
+        print(f"{pid:<16} {f0:>7}  {s.formant_ratio:>6.2f}  "
+              f"{s.tilt_db_oct:>+5.1f}dB  {s.description}")
+    return 0
+
+
 def _cmd_check_update(args) -> int:
     from .updater.updater import Updater
     u = Updater()
@@ -223,6 +275,15 @@ def main(argv=None) -> int:
     p_conv.add_argument("dst")
     p_conv.add_argument("--preset", required=True)
     p_conv.set_defaults(fn=_cmd_convert)
+
+    p_morph = sub.add_parser("morph", help="high-quality offline voice morph (WORLD)")
+    p_morph.add_argument("src")
+    p_morph.add_argument("dst")
+    p_morph.add_argument("--preset", required=True,
+                         help="see: voxmorph morphs")
+    p_morph.set_defaults(fn=_cmd_morph)
+
+    sub.add_parser("morphs", help="list WORLD morph presets").set_defaults(fn=_cmd_morph_list)
 
     p_up = sub.add_parser("check-update", help="check for a new release")
     p_up.add_argument("--channel", default="stable", choices=["stable", "ai-nightly"])

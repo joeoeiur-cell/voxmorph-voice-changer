@@ -8,3 +8,7 @@ sounddevice>=0.4.6     # PortAudio bindings (WASAPI/ASIO on Windows)
 soundfile>=0.12.1
 PySide6>=6.6,<6.9      # GUI
 keyboard>=0.13.5 ; sys_platform == "win32"   # global hotkeys
+
+# Optional: high-quality OFFLINE morphing (voxmorph morph / website demos).
+# Not needed for realtime; the app degrades to the phase vocoder without it.
+pyworld>=0.3.4
