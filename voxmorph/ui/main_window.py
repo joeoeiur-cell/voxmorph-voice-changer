@@ -57,6 +57,9 @@ class MainWindow(QMainWindow):
 
         self._rebuild_tiles()
         self._sync()
+        # viewport width is only final once the window has been laid out, so
+        # settle the column count on the next tick
+        QTimer.singleShot(0, self._rebuild_tiles)
 
     # ------------------------------------------------------------------ build
     def _build_ui(self) -> None:
@@ -293,6 +296,14 @@ class MainWindow(QMainWindow):
             empty.setObjectName("hint")
             empty.setAlignment(Qt.AlignCenter)
             self.grid.addWidget(empty, 0, 0)
+            return
+
+        # keep the active voice on screen; otherwise picking one further down
+        # the list leaves the user staring at an unchanged grid
+        for t in self._tiles:
+            if t.isChecked():
+                QTimer.singleShot(0, lambda w=t: self.scroll.ensureWidgetVisible(w, 0, 40))
+                break
 
     def _column_count(self) -> int:
         """Fit as many tiles as the viewport allows, accounting for the grid's

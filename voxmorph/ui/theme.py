@@ -24,6 +24,9 @@ QWidget {{
     font-family: 'Segoe UI', 'Inter', sans-serif;
     font-size: 13px;
 }}
+/* Labels must not paint the window colour over lighter panels such as the
+   header and footer, otherwise every caption sits in its own dark box. */
+QLabel {{ background: transparent; }}
 QGroupBox {{
     background-color: {COLORS['surface']};
     border: 1px solid {COLORS['border']};
