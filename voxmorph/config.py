@@ -25,7 +25,9 @@ LATENCY_PROFILES: Dict[str, Dict[str, float]] = {
 class AudioConfig:
     input_device: int | None = None
     output_device: int | None = None
-    monitor_device: int | None = None     # optional "hear yourself" device
+    monitor_device: int | None = None     # "hear yourself" device (headphones)
+    monitor_enabled: bool = False
+    monitor_volume_db: float = -6.0
     samplerate: int = 48000
     channels: int = 1
     latency_profile: str = "low"

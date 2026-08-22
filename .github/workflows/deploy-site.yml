@@ -49,7 +49,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: .cache/piper
-          key: piper-en_US-ryan-medium-v1
+          key: piper-en_US-ryan-high-v1
 
       - name: Render demo audio through the DSP engine
         run: python website/build_audio.py

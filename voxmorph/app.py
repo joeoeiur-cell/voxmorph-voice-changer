@@ -88,6 +88,13 @@ class VoxMorphApp:
             else:
                 self._emit("warn", "No virtual audio cable found - install VB-CABLE so "
                                    "other apps can hear your converted voice.")
+        if a.monitor_device is None:
+            from .audio.devices import default_output
+            spk = default_output()
+            if spk:
+                a.monitor_device = spk.index
+                changed = True
+                log.info("Monitor device -> %s", spk.name)
         sr = negotiate_samplerate(a.input_device, a.output_device, a.samplerate)
         if sr != a.samplerate:
             log.info("Sample rate negotiated to %d Hz", sr)
@@ -250,6 +257,18 @@ class VoxMorphApp:
             self._emit("info", "Muted" if self.pipeline.muted else "Unmuted")
             return self.pipeline.muted
         return False
+
+    def toggle_monitor(self) -> bool:
+        """Hear yourself through headphones. Needs the audio graph rebuilt,
+        because it adds or removes a whole output stream."""
+        on = not self.cfg.audio.monitor_enabled
+        self.cfg.audio.monitor_enabled = on
+        self.cfg.save()
+        if self.pipeline and self.pipeline.running:
+            self.pipeline.restart()
+        self._emit("info", "Monitoring on - use headphones to avoid feedback"
+                           if on else "Monitoring off")
+        return on
 
     def panic(self) -> None:
         """Immediate silence + stop. Bound to a hotkey for obvious reasons."""

@@ -41,9 +41,9 @@ from voxmorph.dsp.world_morph import (HAVE_WORLD, PRESETS,  # noqa: E402
 
 OUT = ROOT / "website" / "audio"
 MODELS = ROOT / ".cache" / "piper"
-VOICE = "en_US-ryan-medium"
+VOICE = "en_US-ryan-high"
 BASE_URL = ("https://huggingface.co/rhasspy/piper-voices/resolve/main"
-            "/en/en_US/ryan/medium")
+            "/en/en_US/ryan/high")
 
 PHRASE = ("Hey, this is my voice running through VoxMorph in real time. "
           "Same words, completely different person.")

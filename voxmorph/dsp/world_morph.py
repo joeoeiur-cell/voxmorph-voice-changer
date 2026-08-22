@@ -70,6 +70,8 @@ class MorphSpec:
     f1_damping: float = 0.72     # how much less the F1 region scales (0..1)
     tilt_db_oct: float = 0.0     # + brightens the source, - darkens it
     breathiness: float = 1.0     # >1 raises aperiodic (noise) energy
+    hf_aperiodicity: float = 0.0   # top-octave noise floor; usually a no-op,
+                                   # see apply_breathiness() for why
     f0_jitter: float = 0.0       # natural micro-variation, in cents
     description: str = ""
 
@@ -182,23 +184,59 @@ def apply_tilt(sp: np.ndarray, fs: int, db_per_oct: float,
     return sp * (10.0 ** (gain_db / 10.0))[None, :]   # sp is power, hence /10
 
 
-def apply_breathiness(ap: np.ndarray, amount: float) -> np.ndarray:
-    """Scale aperiodicity - the noise/harmonic balance of the glottal source."""
-    if abs(amount - 1.0) < 1e-3:
-        return ap
-    return np.clip(ap * amount, 1e-6, 1.0 - 1e-6)
+def apply_breathiness(ap: np.ndarray, amount: float, fs: int = 0,
+                      hf_floor: float = 0.0, hf_from: float = 3500.0) -> np.ndarray:
+    """Shape the noise/harmonic balance of the glottal source.
+
+    `hf_floor` raises aperiodicity above `hf_from` toward a minimum.
+
+    Measured note: on speech analysed with D4C the top octaves already come
+    back at ~0.78-0.86 aperiodicity, so this floor is normally a no-op and
+    defaults to 0. It is kept for sources where the analyser under-estimates
+    high-band noise (heavily denoised or already-vocoded input), where pure
+    harmonics up top do read as robotic.
+    """
+    out = ap
+    if abs(amount - 1.0) > 1e-3:
+        out = np.clip(out * amount, 1e-6, 1.0 - 1e-6)
+
+    if hf_floor > 0.0 and fs:
+        n_bins = out.shape[1]
+        freqs = np.linspace(0.0, fs / 2.0, n_bins)
+        # ramp in smoothly so there is no audible seam at the crossover
+        ramp = np.clip((freqs - hf_from) / max(fs / 2.0 - hf_from, 1.0), 0.0, 1.0)
+        target = hf_floor * ramp[None, :]
+        out = np.maximum(out, target)
+
+    return np.clip(out, 1e-6, 1.0 - 1e-6)
 
 
-def add_jitter(f0: np.ndarray, cents: float, seed: int = 0) -> np.ndarray:
-    """Smoothed micro-variation in pitch. Perfectly steady F0 is the single
-    biggest giveaway of synthetic speech."""
-    if cents <= 0:
+def add_jitter(f0: np.ndarray, cents: float, seed: int = 0,
+               frame_period_ms: float = 5.0) -> np.ndarray:
+    """Natural pitch movement.
+
+    Real voices drift slowly (sub-audio, a few Hz at most) and jitter a tiny
+    amount cycle-to-cycle. An earlier version smoothed white noise over only
+    ~45 ms, which left energy around 20 Hz - squarely in the flutter range, and
+    audible as exactly the robotic warble this is meant to avoid. The drift is
+    now low-passed to roughly 2-3 Hz.
+    """
+    if cents <= 0 or len(f0) == 0:
         return f0
     rng = np.random.default_rng(seed)
-    noise = rng.standard_normal(len(f0))
-    k = 9
-    noise = np.convolve(noise, np.ones(k) / k, mode="same")   # slow drift
-    out = f0 * (2.0 ** (noise * cents / 1200.0))
+
+    # ~300 ms Hann smoothing -> drift below about 3 Hz
+    win = max(3, int(round(300.0 / max(frame_period_ms, 1e-3))) | 1)
+    kernel = np.hanning(win)
+    kernel /= kernel.sum()
+    drift = np.convolve(rng.standard_normal(len(f0) + win), kernel, mode="same")[: len(f0)]
+    if (s := drift.std()) > 1e-9:
+        drift /= s
+
+    # a whisper of fast jitter; real cycle-to-cycle jitter is well under 1%
+    micro = rng.standard_normal(len(f0)) * 0.12
+
+    out = f0 * (2.0 ** ((drift + micro) * cents / 1200.0))
     return np.where(f0 > 0, out, 0.0)
 
 
@@ -237,12 +275,12 @@ def morph(audio: np.ndarray, fs: int, spec: MorphSpec,
         ratio = spec.f0_ratio
     ratio = float(np.clip(ratio, 0.25, 4.0))
     new_f0 = f0 * ratio
-    new_f0 = add_jitter(new_f0, spec.f0_jitter)
+    new_f0 = add_jitter(new_f0, spec.f0_jitter, frame_period_ms=5.0)
 
     # --- vocal tract ------------------------------------------------------
     new_sp = warp_envelope(sp, fs, spec.formant_ratio, spec.f1_damping)
     new_sp = apply_tilt(new_sp, fs, spec.tilt_db_oct)
-    new_ap = apply_breathiness(ap, spec.breathiness)
+    new_ap = apply_breathiness(ap, spec.breathiness, fs, spec.hf_aperiodicity)
 
     y = pyworld.synthesize(np.ascontiguousarray(new_f0),
                            np.ascontiguousarray(new_sp),

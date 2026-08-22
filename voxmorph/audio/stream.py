@@ -59,7 +59,6 @@ class AudioPipeline:
         self.bypass = False
         self.muted = False
         self.ptt_active = True        # True unless push-to-talk is armed
-        self.monitor_enabled = False
         self.recorder = None          # set by Recorder.attach()
         self.soundboard_mix: Optional[Callable[[int], np.ndarray]] = None
         self.on_status: Optional[StatusCb] = None
@@ -141,16 +140,32 @@ class AudioPipeline:
             self._close_streams()
             return False
 
-        if self.monitor_enabled and a.monitor_device is not None:
-            try:
-                self._mon_stream = sd.OutputStream(
-                    device=a.monitor_device, channels=1, samplerate=self.sr,
-                    blocksize=self.block, dtype="float32", latency="low",
-                    callback=self._on_monitor,
-                )
-            except Exception as exc:
-                log.warning("Monitor device unavailable: %s", exc)
-                self._mon_stream = None
+        if self.monitor_enabled:
+            # Fall back to the system default output. Requiring an explicitly
+            # chosen device here is what silently broke "hear yourself": the
+            # field defaults to None, so the stream was never opened and the
+            # toggle appeared to do nothing.
+            dev = a.monitor_device
+            if dev is None:
+                from .devices import default_output
+                d = default_output()
+                dev = d.index if d else None
+                if dev is not None:
+                    a.monitor_device = dev
+                    log.info("Monitor device defaulted to %s", d.name)
+            if dev is None:
+                self._status("Cannot monitor: no output device available.")
+            else:
+                try:
+                    self._mon_stream = sd.OutputStream(
+                        device=dev, channels=1, samplerate=self.sr,
+                        blocksize=self.block, dtype="float32", latency="low",
+                        callback=self._on_monitor,
+                    )
+                except Exception as exc:
+                    log.warning("Monitor device unavailable: %s", exc)
+                    self._status(f"Could not open the monitor device: {exc}")
+                    self._mon_stream = None
 
         self._worker = threading.Thread(target=self._run, name="voxmorph-dsp", daemon=True)
         self._worker.start()
@@ -222,7 +237,17 @@ class AudioPipeline:
         outdata[:, 0] = data * gain
 
     def _on_monitor(self, outdata, frames, time_info, status) -> None:
-        outdata[:, 0] = self.monitor_ring.read(frames)
+        gain = 10.0 ** (self.cfg.audio.monitor_volume_db / 20.0)
+        outdata[:, 0] = self.monitor_ring.read(frames) * gain
+
+    @property
+    def monitor_enabled(self) -> bool:
+        """Single source of truth - persisted in the config, not a stray flag."""
+        return self.cfg.audio.monitor_enabled
+
+    @monitor_enabled.setter
+    def monitor_enabled(self, value: bool) -> None:
+        self.cfg.audio.monitor_enabled = bool(value)
 
     # ------------------------------------------------------------ processing
     def _run(self) -> None:

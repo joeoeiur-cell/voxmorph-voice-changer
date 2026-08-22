@@ -120,5 +120,64 @@ QToolTip {{
 }}
 QLabel#hint {{ color: {COLORS['text_dim']}; font-size: 11px; }}
 QLabel#h1 {{ font-size: 20px; font-weight: 700; }}
+QLabel#brand {{ font-size: 15px; font-weight: 800; letter-spacing: -0.2px; }}
 QLabel#stat {{ font-family: 'Consolas','JetBrains Mono',monospace; color: {COLORS['text_dim']}; }}
+
+/* --- single-screen shell ------------------------------------------------ */
+QFrame#header {{
+    background: {COLORS['surface']};
+    border-bottom: 1px solid {COLORS['border']};
+}}
+QFrame#footer {{
+    background: {COLORS['surface']};
+    border-top: 1px solid {COLORS['border']};
+}}
+QFrame#updateBanner {{
+    background: {COLORS['surface2']};
+    border: 1px solid {COLORS['update']};
+    border-radius: 10px;
+}}
+
+QPushButton#iconBtn {{
+    background: {COLORS['surface2']};
+    border: 1px solid {COLORS['border']};
+    border-radius: 10px;
+    font-size: 15px;
+    color: {COLORS['text_dim']};
+    padding: 0;
+}}
+QPushButton#iconBtn:hover {{ border-color: {COLORS['accent']}; color: {COLORS['text']}; }}
+QPushButton#iconBtn:checked {{
+    background: {COLORS['accent_dk']};
+    border-color: {COLORS['accent']};
+    color: #ffffff;
+}}
+
+QPushButton#chipBtn {{
+    background: transparent;
+    border: 1px solid {COLORS['border']};
+    border-radius: 14px;
+    padding: 5px 13px;
+    font-size: 11px;
+    font-weight: 600;
+    color: {COLORS['text_dim']};
+}}
+QPushButton#chipBtn:hover {{ color: {COLORS['text']}; border-color: {COLORS['accent']}; }}
+QPushButton#chipBtn:checked {{
+    background: {COLORS['accent']};
+    border-color: {COLORS['accent']};
+    color: #06202a;
+}}
+
+QPushButton#voiceTile {{ background: transparent; border: none; text-align: left; }}
+
+QLabel#chip {{
+    background: {COLORS['surface2']};
+    border: 1px solid {COLORS['border']};
+    border-radius: 7px;
+    padding: 3px 9px;
+    font-family: 'Consolas','JetBrains Mono',monospace;
+    font-size: 10px;
+    color: {COLORS['text_dim']};
+}}
 """
